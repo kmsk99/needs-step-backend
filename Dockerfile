@@ -4,20 +4,20 @@ FROM node:16-alpine
 WORKDIR /usr/src/app
 # 만들 이미지에 작업할 디렉토리로 이동합니다.  
 
-COPY package.json .
-COPY yarn.lock .
+COPY package.json yarn.lock ./
 
 # 이미지 생성 과정에서 실행할 명령어
-RUN yarn
+RUN yarn install
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE 4000
+
+ENV CHOKIDAR_USEPOLLING=true
 
 # 컨테이너 실행시 실행할 명령어
 CMD ["yarn", "start:dev"]
 
-ENV CHOKIDAR_USEPOLLING=true
 
 # 이미지 생성 명령어 (현 파일과 같은 디렉토리에서)
 # docker build -t plugin .
