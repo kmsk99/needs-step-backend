@@ -10,9 +10,10 @@ import { CoreEntity } from 'src/common/entities/core.entity';
 import { InternalServerErrorException } from '@nestjs/common';
 import { IsBoolean, IsEmail, IsEnum, IsString } from 'class-validator';
 export enum UserRole {
-  Client = 'Client',
-  Owner = 'Owner',
-  Delivery = 'Delivery',
+  Admin = 'Admin',
+  Premium = 'Premium',
+  Free = 'Free',
+  Tester = 'Tester',
 }
 
 registerEnumType(UserRole, { name: 'UserRole' });
