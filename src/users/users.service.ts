@@ -27,6 +27,7 @@ export class UserService {
   async createAccount({
     email,
     password,
+    username,
     role,
   }: CreateAccountInput): Promise<CreateAccountOutput> {
     try {
@@ -35,7 +36,7 @@ export class UserService {
         return { ok: false, error: 'There is a user with that email already' };
       }
       const user = await this.users.save(
-        this.users.create({ email, password, role }),
+        this.users.create({ email, password, username, role }),
       );
       const verification = await this.verifications.save(
         this.verifications.create({
@@ -96,11 +97,19 @@ export class UserService {
 
   async editProfile(
     userId: number,
-    { email, password }: EditProfileInput,
+    { email, password, username }: EditProfileInput,
   ): Promise<EditProfileOutput> {
     try {
       const user = await this.users.findOne(userId);
       if (email) {
+        const exists = await this.users.findOne({ email });
+        if (exists) {
+          return {
+            ok: false,
+            error: 'There is a user with that email already',
+          };
+        }
+
         user.email = email;
         user.verified = false;
         await this.verifications.delete({ user: { id: user.id } });
@@ -111,6 +120,9 @@ export class UserService {
       }
       if (password) {
         user.password = password;
+      }
+      if (username) {
+        user.username = username;
       }
       await this.users.save(user);
       return {

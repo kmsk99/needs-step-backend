@@ -68,15 +68,16 @@ describe('UserService', () => {
 
   describe('createAccount', () => {
     const createAccountArgs = {
-      email: 'bs@email.com',
-      password: 'bs.password',
-      role: UserRole.Client,
+      email: 'fake@email.com',
+      password: 'fakepassword',
+      username: 'fakename',
+      role: UserRole.Free,
     };
 
     it('should fail if user exists', async () => {
       usersRepository.findOne.mockResolvedValue({
         id: 1,
-        email: '',
+        email: 'fake@email.com',
       });
       const result = await service.createAccount(createAccountArgs);
       expect(result).toMatchObject({
@@ -196,33 +197,38 @@ describe('UserService', () => {
   });
 
   describe('editProfile', () => {
-    it('should change email', async () => {
-      const oldUser = {
-        email: 'bs@old.com',
-        verified: true,
-      };
-      const editProfileArgs = {
-        userId: 1,
-        input: { email: 'bs@new.com' },
-      };
-      const newVerification = {
-        code: 'code',
-      };
-      const newUser = {
-        verified: false,
-        email: editProfileArgs.input.email,
-      };
+    const oldUser = {
+      email: 'bs@old.com',
+      verified: true,
+    };
+    const editProfileArgs = {
+      userId: 1,
+      input: { email: 'bs@new.com' },
+    };
+    const newVerification = {
+      code: 'code',
+    };
+    const newUser = {
+      verified: false,
+      email: editProfileArgs.input.email,
+    };
 
-      usersRepository.findOne.mockResolvedValue(oldUser);
+    it('should change email', async () => {
+      usersRepository.findOne.mockResolvedValueOnce(oldUser);
+      usersRepository.findOne.mockResolvedValueOnce(undefined);
       verificationsRepository.create.mockReturnValue(newVerification);
       verificationsRepository.save.mockResolvedValue(newVerification);
 
       await service.editProfile(editProfileArgs.userId, editProfileArgs.input);
 
-      expect(usersRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(usersRepository.findOne).toHaveBeenCalledWith(
+      expect(usersRepository.findOne).toHaveBeenCalledTimes(2);
+      expect(usersRepository.findOne).toHaveBeenNthCalledWith(
+        1,
         editProfileArgs.userId,
       );
+      expect(usersRepository.findOne).toHaveBeenNthCalledWith(2, {
+        email: editProfileArgs.input.email,
+      });
 
       expect(verificationsRepository.create).toHaveBeenCalledWith({
         user: newUser,
@@ -238,12 +244,51 @@ describe('UserService', () => {
       );
     });
 
+    it('same email exists', async () => {
+      usersRepository.findOne.mockResolvedValueOnce(oldUser);
+      usersRepository.findOne.mockResolvedValueOnce(oldUser);
+
+      const result = await service.editProfile(
+        editProfileArgs.userId,
+        editProfileArgs.input,
+      );
+
+      expect(usersRepository.findOne).toHaveBeenCalledTimes(2);
+      expect(usersRepository.findOne).toHaveBeenNthCalledWith(
+        1,
+        editProfileArgs.userId,
+      );
+      expect(usersRepository.findOne).toHaveBeenNthCalledWith(2, {
+        email: editProfileArgs.input.email,
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        error: 'There is a user with that email already',
+      });
+    });
+
     it('should change password', async () => {
       const editProfileArgs = {
         userId: 1,
         input: { password: 'new.password' },
       };
       usersRepository.findOne.mockResolvedValue({ password: 'old' });
+      const result = await service.editProfile(
+        editProfileArgs.userId,
+        editProfileArgs.input,
+      );
+      expect(usersRepository.save).toHaveBeenCalledTimes(1);
+      expect(usersRepository.save).toHaveBeenCalledWith(editProfileArgs.input);
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('should change username', async () => {
+      const editProfileArgs = {
+        userId: 1,
+        input: { username: 'new.username' },
+      };
+      usersRepository.findOne.mockResolvedValue({ username: 'old' });
       const result = await service.editProfile(
         editProfileArgs.userId,
         editProfileArgs.input,
